@@ -17,7 +17,9 @@ import { reactive, computed, ref } from 'vue';
 const itemSize = 10000;
 const itemHeight = 30; // 每个列表项高度
 const screenHeight = 500; // 可视区域高度
-const showCount = Math.ceil(screenHeight / itemHeight); // 可视区域显示的列表项个数
+const canShowCount = Math.ceil(screenHeight / itemHeight); // 可视区域显示的列表项个数
+const radianCount = 5; // 预加载的列表项个数(前后缓冲区数量)
+const showCount = canShowCount + radianCount * 2; // 渲染列表项个数
 const list = reactive(new Array(itemSize).fill(0).map((_, i) => i)); // 总列表
 const totalHeight = computed(() => itemSize * itemHeight); // 总高度
 const showTotalHeight = computed(() => showCount * itemHeight); // 展示列表的总高度
@@ -28,9 +30,15 @@ const startOffset = ref(0); // 可视区域偏移量
 
 const onILCScroll = e => {
   const { target: { scrollTop } } = e;
-  startOffset.value = scrollTop - (scrollTop % itemHeight); // ‼️关键代码 为什么要减去余数？因为 scrollTop 是相对于可视区域的，而我们需要的是相对于列表的偏移量
-  startIndex.value = Math.floor(scrollTop / itemHeight);
-  endIndex.value = Math.min(startIndex.value + showCount, itemSize);
+  if (scrollTop >= radianCount * itemHeight) {
+    startOffset.value = scrollTop - (scrollTop % itemHeight) - radianCount * itemHeight; // ‼️关键代码 为什么要减去余数？因为 scrollTop 是相对于可视区域的，而我们需要的是相对于列表的偏移量
+    startIndex.value = Math.floor(scrollTop / itemHeight) - radianCount;
+    endIndex.value = Math.min(startIndex.value + showCount, itemSize);
+  } else {
+    startOffset.value = 0;
+    startIndex.value = 0;
+    endIndex.value = showCount;
+  }
 }
 </script>
 
