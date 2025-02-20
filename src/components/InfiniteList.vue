@@ -17,28 +17,33 @@ import { reactive, computed, ref } from 'vue';
 const itemSize = 10000;
 const itemHeight = 30; // 每个列表项高度
 const screenHeight = 500; // 可视区域高度
-const canShowCount = Math.ceil(screenHeight / itemHeight); // 可视区域显示的列表项个数
+const showCount = Math.ceil(screenHeight / itemHeight); // 可视区域显示的列表项个数
 const radianCount = 5; // 预加载的列表项个数(前后缓冲区数量)
-const showCount = canShowCount + radianCount * 2; // 渲染列表项个数
+const renderCount = showCount + radianCount * 2; // 渲染列表项个数
 const list = reactive(new Array(itemSize).fill(0).map((_, i) => i)); // 总列表
 const totalHeight = computed(() => itemSize * itemHeight); // 总高度
-const showTotalHeight = computed(() => showCount * itemHeight); // 展示列表的总高度
+const showTotalHeight = computed(() => renderCount * itemHeight); // 展示列表的总高度
 const startIndex = ref(0); // 展示列表的起始索引
-const endIndex = ref(showCount); // 展示列表的结束索引
+const endIndex = ref(renderCount); // 展示列表的结束索引
 const showList = computed(() => list.slice(startIndex.value, endIndex.value)); // 展示的列表
 const startOffset = ref(0); // 可视区域偏移量
 
 const onILCScroll = e => {
   const { target: { scrollTop } } = e;
-  if (scrollTop >= radianCount * itemHeight) {
-    startOffset.value = scrollTop - (scrollTop % itemHeight) - radianCount * itemHeight; // ‼️关键代码 为什么要减去余数？因为 scrollTop 是相对于可视区域的，而我们需要的是相对于列表的偏移量
-    startIndex.value = Math.floor(scrollTop / itemHeight) - radianCount;
-    endIndex.value = Math.min(startIndex.value + showCount, itemSize);
-  } else {
-    startOffset.value = 0;
-    startIndex.value = 0;
-    endIndex.value = showCount;
+  if (endIndex.value < itemSize) { // endIndex.value 是上次渲染的结束索引，确保最后的偏移准确，不会少偏移一个 itemHeight
+    // 当渲染完最后 renderCount 个列表项时，不需要更新列表和偏移量
+    let offset = scrollTop - (scrollTop % itemHeight); // 计算偏移量
+    offset = offset - radianCount * itemHeight; // 当有缓冲区时，减去缓冲区的高度，才能实现缓冲区生效，即顶部可视区域外始终有 raidanCount 个元素
+    offset = Math.max(0, offset); // 保证 offset 不会小于 0
+    startOffset.value = offset;
   }
+  let sIndex = Math.floor(scrollTop / itemHeight); // 计算开始索引
+  sIndex = Math.floor(scrollTop / itemHeight) - radianCount; // 当缓冲区内容还在可视区域时，不更新开始索引
+  sIndex = Math.max(0, sIndex); // 保证开始索引不会小于 0
+  sIndex = Math.min(sIndex, itemSize - renderCount); // 保证开始索引不会超过最大值
+  startIndex.value = sIndex; // 更新开始索引
+
+  endIndex.value = Math.min(startIndex.value + renderCount, itemSize); // 更新结束索引
 }
 </script>
 
@@ -58,6 +63,7 @@ const onILCScroll = e => {
     .infinite-list-item {
       width: 100%;
       border-bottom: 1px solid #000;
+      box-sizing: border-box;
     }
   }
 }
