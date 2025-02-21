@@ -4,12 +4,12 @@ import { reactive } from 'vue';
 const itemSize = 10000;
 const itemHeight = 30;
 const radianCount = 5;
-const list = reactive(new Array(itemSize).fill(0).map((_, i) => i)); // 总列表
+const list = reactive(new Array(itemSize).fill(0).map((_, i) => `【${i}】${'InfiniteList'.repeat(Math.floor(Math.random() * 5) + 5)}`)); // 总列表
 </script>
 
 <template>
   <div class="list">
-    <VirtualList :listData="list" :itemHeight="itemHeight" :height="600" :radianCount="radianCount" v-slot="slotProps">
+    <VirtualList :listData="list" :height="600" :radianCount="radianCount" :estimatedItemHeight="50" v-slot="slotProps">
       <div class="item">{{ slotProps.item }}</div>
     </VirtualList>
   </div>
@@ -24,9 +24,10 @@ const list = reactive(new Array(itemSize).fill(0).map((_, i) => i)); // 总列�
 
   .item {
     width: 100%;
-    height: 30px;
     border-bottom: 1px solid red;
+    text-align: left;
     box-sizing: border-box;
+    word-break: break-all;
   }
 }
 </style>
